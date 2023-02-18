@@ -1,0 +1,7 @@
+{
+    "port": "COM9",
+    "configuration": "cpu=atmega328old",
+    "board": "arduino:avr:nano",
+    "programmer": "avrisp",
+    "sketch": "src\\receiver\\receiver.ino"
+}
