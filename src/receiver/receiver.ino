@@ -1,10 +1,7 @@
 #include <Wire.h>
+#include <stdio.h>
 
-int address = 4;
-
-int rChannel = 0;
-int gChannel = 0;
-int bChannel = 0;
+int i2cAddress = 4;
 
 #define rPin 6
 #define gPin 5
@@ -14,7 +11,12 @@ int bChannel = 0;
 #define gPin2 10
 #define bPin2 9
 
-int incomingByte = 0; // for incoming serial data
+struct color
+{
+    int red;
+    int green;
+    int blue;
+};
 
 int x = 0;
 
@@ -29,166 +31,237 @@ void setup()
     pinMode(gPin2, OUTPUT);
     pinMode(bPin2, OUTPUT);
     Wire.begin(4);
-    Serial.begin(9600);
+    Serial.begin(115200);
 }
 
 void loop()
 {
     // Wire.onReceive(receiveEvent);
     // send data only when you receive data:
-    if (Serial.available() > 0) {
-      // read the incoming byte:
-      incomingByte = Serial.read();
-      x = incomingByte - 48;
-      // say what you got:
-      Serial.print("I received: ");
-      Serial.println(incomingByte, DEC);
+    if (Serial.available() > 0)
+    {
+        // read the incoming byte:
+        int incomingByte = Serial.read();
+        x = incomingByte - 48;
+        // say what you got:
+        Serial.print("I received: ");
+        Serial.println(x, DEC);
     }
     modeSelect(x);
+    // modeSelect(x);
 }
 
-void modeSelect(int select) {
+void modeSelect(int select)
+{
+    color c = {0, 0, 0};
     switch (select)
     {
-        default:
-            colorSelector(0);
-            outputToLED(rChannel, gChannel, bChannel);
-            break;
-        // Purple Static Light 
-        case 1:
-            colorSelector(1);
-            outputToLED(rChannel, gChannel, bChannel);
-            break;
-        // Yellow Static LightMode
-        case 2:
-            colorSelector(2);
-            outputToLED(rChannel, gChannel, bChannel);
-            break;
-        // Orange Static Light
-        case 3:
-            colorSelector(3);
-            outputToLED(rChannel, gChannel, bChannel);
-            break;
-        // Orange Pulse
-        case 4:
-            orangePulse();
-            break; 
-    }
-}
-void colorSelector(int select) {
-    switch (select)
-    {
-        // check for off mode
-    case 0:
-        rChannel = 0;
-        gChannel = 0;
-        bChannel = 0;
-        // Serial.println("Default");
+    // No Color
+    default:
+        c = colorSelector(0);
+        outputToLED(c);
         break;
-
-        // check for purple mode
+    // Purple Static Light
     case 1:
-        rChannel = 194;
-        gChannel = 0;
-        bChannel = 242;
-        Serial.println("Purple");
+        c = colorSelector(1);
+        outputToLED(c);
         break;
-
-        // Check for yellow mode
+    // Yellow Static LightMode
     case 2:
-        rChannel = 255;
-        gChannel = 120;
-        bChannel = 0;
-        Serial.println("Yellow");
+        c = colorSelector(2);
+        outputToLED(c);
         break;
-
-        // check for orange mode
+    // Orange Static Light
     case 3:
-        rChannel = 255;
-        gChannel = 55;
-        bChannel = 0;
-        Serial.println("Orange");
+        c = colorSelector(3);
+        outputToLED(c);
         break;
-        // Red
+    // Orange Pulse
     case 4:
-        rChannel = 255;
-        gChannel = 0;
-        bChannel = 0;
-        Serial.println("Red");
+        heartBeatOrange();
         break;
+    // Purple Pulse
     case 5:
-        rChannel = 0;
-        gChannel = 255;
-        bChannel = 0;
-        Serial.println("Green");
+        heartBeatPurple();
         break;
     case 6:
-        rChannel = 0;
-        gChannel = 0;
-        bChannel = 255;
-        Serial.println("Blue");
+        pulseOrange();
+        x = 0;
         break;
     case 7:
-        orangePulse();
-        // set default as Off
-    
-    default:
-        rChannel = 0;
-        gChannel = 0;
-        bChannel = 0;
+        pulsePurple();
+        x = 0;
+        break;
+    case 8:
+        pulseYellow();
+        x = 0;
+        break;
+    case 9:
+        pulseGreen();
+        x = 0;
         break;
     }
 }
-
-void outputToLED(int rValue, int gValue, int bValue){
-    analogWrite(rPin, rValue);
-    analogWrite(gPin, gValue);
-    analogWrite(bPin, bValue);
-    analogWrite(rPin2, rValue);
-    analogWrite(gPin2, gValue);
-    analogWrite(bPin2, bValue);
+color colorSelector(int select)
+{
+    color c = {0, 0, 0};
+    switch (select)
+    {
+    // Purple
+    case 1:
+        // Serial.println("Purple Static");
+        c = {194, 0, 242};
+        break;
+    // Yellow
+    case 2:
+        // Serial.println("Yellow Static");
+        c = {255, 150, 0};
+        break;
+    // Orange
+    case 3:
+        // Serial.println("Orange Static");
+        c = {255, 55, 0};
+        break;
+    // Green
+    case 4:
+        // Serial.println("Green Static");
+        c = {0, 255, 0};
+        break;
+    default:
+        // Serial.println("No Color");
+        c = {0, 0, 0};
+        break;
+    }
+    return c;
 }
 
-void orangePulse(){
-    Serial.println("Orange Pulse");
-    colorSelector(3);
-    int maxDecrease = 50;
-    int delayTime = 7;
-    for (int i = 0; i < maxDecrease; i++)
+void outputToLED(color c)
+{
+    analogWrite(rPin, c.red);
+    analogWrite(gPin, c.green);
+    analogWrite(bPin, c.blue);
+    analogWrite(rPin2, c.red);
+    analogWrite(gPin2, c.green);
+    analogWrite(bPin2, c.blue);
+}
+
+void heartBeat(color c, int channels[3], int delayTime = 7, int decrement = 100)
+{
+    Serial.println("Pulse");
+    color pulsedColor = c;
+    int i = 0;
+    while (true)
     {
-        int decreasedRChannel = rChannel - i;
-        int decreasedGChannel = gChannel - i;
-        int decreasedBChannel = bChannel - i;
-
-        if (decreasedRChannel < 0)
-        {
-            decreasedRChannel = 0;
-        }
-        if (decreasedGChannel < 0)
-        {
-            decreasedGChannel = 0;
-        }
-        if (decreasedBChannel < 0)
-        {
-            decreasedBChannel = 0;
-        }
-
-        outputToLED(decreasedRChannel, decreasedGChannel, decreasedBChannel);
+        outputToLED(pulsedColor);
+        Serial.print("Pulse: ");
+        Serial.print("(");
+        Serial.print(pulsedColor.red);
+        Serial.print(",");
+        Serial.print(pulsedColor.green);
+        Serial.print(",");
+        Serial.print(pulsedColor.blue);
+        Serial.println(")");
         delay(delayTime);
+        if (pulsedColor.red > 0 && channels[0] == 1)
+        {
+            pulsedColor.red--;
+        }
+        if (pulsedColor.green > 0 && channels[1] == 1)
+        {
+            pulsedColor.green--;
+        }
+        if (pulsedColor.blue > 0 && channels[2] == 1)
+        {
+            pulsedColor.blue--;
+        }
+        if ((pulsedColor.red == 0 && channels[0]) || (pulsedColor.green == 0 && channels[1]) || (pulsedColor.blue == 0 && channels[2]))
+        {
+            break;
+        }
+        i++;
+        if (i > decrement)
+        {
+            break;
+        }
     }
-    for (int i = maxDecrease; i > 0; i--)
+    delay(10);
+    i = 0;
+    while (true)
     {
-        int increasedRChannel = rChannel - i;
-        int increasedGChannel = gChannel - i;
-        int increasedBChannel = bChannel;
-
-        outputToLED(increasedRChannel, increasedGChannel, increasedBChannel);
+        outputToLED(pulsedColor);
+        Serial.print("Pulse: ");
+        Serial.print("(");
+        Serial.print(pulsedColor.red);
+        Serial.print(",");
+        Serial.print(pulsedColor.green);
+        Serial.print(",");
+        Serial.print(pulsedColor.blue);
+        Serial.println(")");
         delay(delayTime);
+        if (pulsedColor.red < c.red && channels[0] == 1)
+        {
+            pulsedColor.red++;
+        }
+        if (pulsedColor.green < c.green && channels[1] == 1)
+        {
+            pulsedColor.green++;
+        }
+        if (pulsedColor.blue < c.blue && channels[2] == 1)
+        {
+            pulsedColor.blue++;
+        }
+        if ((pulsedColor.red == c.red && channels[0]) || (pulsedColor.green == c.green && channels[1]) || (pulsedColor.blue == c.blue && channels[2]))
+        {
+            break;
+        }
+        i++;
+        if (i > decrement)
+        {
+            break;
+        }
+    }
+    Serial.println("Pulse End");
+}
+
+void pulse(color c, int pulses = 3, int pulseLength = 100, int pulseDelay = 100)
+{
+    for (int i = 0; i < pulses; i++)
+    {
+        outputToLED(c);
+        delay(pulseLength);
+        outputToLED(colorSelector(0));
+        delay(pulseDelay);
     }
 }
 
-// void receiveEvent(int howMany)
-// {
-//     x = Wire.read();   // receive byte as an integer
-//     Serial.println(x); // print the integer
-// }
+void heartBeatOrange()
+{
+    int channels[3] = {1, 1, 0};
+    heartBeat(colorSelector(3), channels, 10);
+}
+
+void heartBeatPurple()
+{
+    int channels[3] = {1, 0, 1};
+    heartBeat(colorSelector(1), channels, 10);
+}
+
+void pulseOrange()
+{
+    pulse(colorSelector(3));
+}
+
+void pulsePurple()
+{
+    pulse(colorSelector(1));
+}
+
+void pulseYellow()
+{
+    pulse(colorSelector(2));
+}
+
+void pulseGreen()
+{
+    pulse(colorSelector(4));
+}
