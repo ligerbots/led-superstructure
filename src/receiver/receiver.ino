@@ -18,7 +18,7 @@ struct color
     int blue;
 };
 
-int x = 0;
+int x = 4;
 
 int bytesRecived = 0;
 
@@ -31,24 +31,24 @@ void setup()
     pinMode(gPin2, OUTPUT);
     pinMode(bPin2, OUTPUT);
     Wire.begin(4);
+    Wire.onReceive(modeUpdate);
+    // Wire.onRequest(modeUpdate); // register event
     Serial.begin(115200);
+}
+
+void modeUpdate()
+{
+    while (Wire.available())
+    {
+        x = Wire.read();
+        Serial.println(x);
+    }
+    modeSelect(x);
 }
 
 void loop()
 {
-    // Wire.onReceive(receiveEvent);
-    // send data only when you receive data:
-    if (Serial.available() > 0)
-    {
-        // read the incoming byte:
-        int incomingByte = Serial.read();
-        x = incomingByte - 48;
-        // say what you got:
-        Serial.print("I received: ");
-        Serial.println(x, DEC);
-    }
     modeSelect(x);
-    // modeSelect(x);
 }
 
 void modeSelect(int select)
@@ -60,45 +60,30 @@ void modeSelect(int select)
     default:
         c = colorSelector(0);
         outputToLED(c);
+        Serial.println("No Color");
         break;
     // Purple Static Light
     case 1:
         c = colorSelector(1);
         outputToLED(c);
+        Serial.println("Purple Static");
         break;
     // Yellow Static LightMode
     case 2:
         c = colorSelector(2);
         outputToLED(c);
+        Serial.println("Yellow Static");
         break;
     // Orange Static Light
     case 3:
         c = colorSelector(3);
         outputToLED(c);
+        Serial.println("Orange Static");
         break;
     // Orange Pulse
     case 4:
         heartBeatOrange();
-        break;
-    // Purple Pulse
-    case 5:
-        heartBeatPurple();
-        break;
-    case 6:
-        pulseOrange();
-        x = 0;
-        break;
-    case 7:
-        pulsePurple();
-        x = 0;
-        break;
-    case 8:
-        pulseYellow();
-        x = 0;
-        break;
-    case 9:
-        pulseGreen();
-        x = 0;
+        Serial.println("Orange Pulse");
         break;
     }
 }
@@ -145,13 +130,17 @@ void outputToLED(color c)
     analogWrite(bPin2, c.blue);
 }
 
-void heartBeat(color c, int channels[3], int delayTime = 7, int decrement = 100)
+void heartBeat(color c, int channels[3], int delayTime = 25, int decrement = 150)
 {
     Serial.println("Pulse");
     color pulsedColor = c;
     int i = 0;
     while (true)
     {
+        if (x != 4)
+        {
+            break;
+        }
         outputToLED(pulsedColor);
         Serial.print("Pulse: ");
         Serial.print("(");
@@ -188,6 +177,10 @@ void heartBeat(color c, int channels[3], int delayTime = 7, int decrement = 100)
     i = 0;
     while (true)
     {
+        if (x != 4)
+        {
+            break;
+        }
         outputToLED(pulsedColor);
         Serial.print("Pulse: ");
         Serial.print("(");
